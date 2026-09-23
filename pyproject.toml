@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trade-data-crypto"
+version = "0.1.0"
+description = "Crypto market-data engine: spot markets, OHLCV bars, tickers, funding rates across exchanges"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "crieck2010" }]
+keywords = ["trading", "crypto", "market-data", "bitcoin", "coinbase"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Science/Research",
+    "Topic :: Office/Business :: Financial",
+]
+
+[project.urls]
+Homepage = "https://github.com/crieck2010/trade-data-crypto"
+
+[project.optional-dependencies]
+yfinance = ["yfinance>=0.2.40", "pandas>=2.0"]
+pandas = ["pandas>=2.0"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
