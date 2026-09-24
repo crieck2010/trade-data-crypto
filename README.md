@@ -190,6 +190,16 @@ Sibling repositories:
 - `trade-dashboard-web` / `trade-dashboard-desktop` — dashboards
 - `trade-suite` — meta-package tying it all together
 
+## The maths
+
+**What you learn.** This is a data engine, so its "maths" is the measurement layer everything downstream trusts: volume-weighted average price, bid/ask spread in basis points, perpetual funding-rate annualization, canonical symbology mapping, and exchange-native bar pagination (300 candles per Coinbase page, merged/sorted/deduped).
+
+**Why it matters.** Every backtest P&L, Sharpe ratio, and VaR number in the suite is computed from bars this engine delivers. Getting VWAP, spread, and funding right at the source means the research built on top inherits honest execution-cost and carry assumptions instead of silently optimistic ones.
+
+**The maths.** `vwap(bars) = Σ(close·volume) / Σ(volume)` over the bar set (None when total volume is zero). `spread_bps = (ask − bid) / last × 10,000`, None when bid/ask is missing. `funding_apr(rate, interval_hours) = (1 + rate)^(8760/interval_hours) − 1` — compounding the per-interval funding rate over a year; positive means longs pay shorts, and `trade-risk` uses it as `daily_cost = funding_apr / 365 × notional` for perp carry accounting. Symbology is a pure string bijection: canonical `BASE/QUOTE` ↔ `BTC-USD` (Coinbase/Yahoo) ↔ `BTCUSDT` (Binance), so one symbol addresses every venue. Coinbase pagination walks `[start, end)` in `300 × granularity` windows (O(windows) HTTP calls) with merge/sort/dedupe so page boundaries never double-count a candle. Crypto trades 24/7, so unlike equities there is no session-gap or weekend handling in bar construction.
+
+**Honest limitations.** VWAP uses bar *close* × volume, not intrabar trade prints — it's an approximation, not exchange VWAP. Funding annualization compounds a single observed rate; real funding drifts every interval. Spread in bps is a point-in-time quote, not an executable cost. yfinance `H4` bars are resampled from 1h, introducing resampling artifacts. Tickers are never cached (real-time), but bars carry a 60-minute TTL — backtests on "today's" bars can lag the market.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
