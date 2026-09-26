@@ -24,8 +24,10 @@ from .models import (
     ensure_utc,
 )
 from .providers import (
+    BinanceUSPublicProvider,
     CoinbasePublicProvider,
     CryptoDataProvider,
+    KrakenPublicProvider,
     YFinanceCryptoProvider,
 )
 from .stats import funding_apr, vwap
@@ -33,13 +35,16 @@ from .symbols import (
     canonical,
     parse_pair,
     to_binance_symbol,
+    to_binanceus_symbol,
     to_coinbase_id,
+    to_kraken_pair,
     to_yahoo_symbol,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
+    "BinanceUSPublicProvider",
     "CoinbasePublicProvider",
     "CryptoBar",
     "CryptoDataClient",
@@ -49,6 +54,7 @@ __all__ = [
     "CryptoTicker",
     "DiskCache",
     "FundingRate",
+    "KrakenPublicProvider",
     "MarketNotFoundError",
     "MarketType",
     "ProviderError",
@@ -62,7 +68,9 @@ __all__ = [
     "funding_apr",
     "parse_pair",
     "to_binance_symbol",
+    "to_binanceus_symbol",
     "to_coinbase_id",
+    "to_kraken_pair",
     "to_yahoo_symbol",
     "vwap",
 ]

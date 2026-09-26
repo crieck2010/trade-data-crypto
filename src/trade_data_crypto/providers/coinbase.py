@@ -63,7 +63,7 @@ class CoinbasePublicProvider(CryptoDataProvider):
         url = _BASE_URL + path
         if params:
             url += "?" + urllib.parse.urlencode(params)
-        request = urllib.request.Request(url, headers={"User-Agent": "trade-data-crypto/0.1.0"})
+        request = urllib.request.Request(url, headers={"User-Agent": "trade-data-crypto/0.2.0"})
         last: Exception | None = None
         for attempt in range(self.max_retries):
             self._throttle()

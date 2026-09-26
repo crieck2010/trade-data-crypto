@@ -6,14 +6,16 @@ algorithmic/agentic trading system — a sibling of `trade-data-equities`,
 `trade-data-options`, and `trade-data-futures`, sharing their
 provider/client/cache design language.
 
-Free data today (Coinbase public REST with no API key, yfinance
-convenience feed), pluggable keyed exchange feeds tomorrow. Built for
-**research, backtesting, and paper trading** — not for live execution.
+Free data today (Coinbase, Kraken, and Binance.US public REST with no
+API key, yfinance convenience feed), pluggable keyed exchange feeds
+tomorrow. Built for **research, backtesting, and paper trading** — not
+for live execution.
 
 ## Features
 
 - **Canonical symbology** — `BASE/QUOTE` everywhere (`BTC/USD`), with
-  conversion to Coinbase/Yahoo (`BTC-USD`) and Binance (`BTCUSDT`) forms.
+  conversion to Coinbase/Yahoo (`BTC-USD`), Binance (`BTCUSDT`),
+  Binance.US (`BTCUSD`), and Kraken (`XXBTZUSD`) forms.
 - **Market models** — spot, perpetual, and dated-future markets with tick
   size, min size, and active status.
 - **Bars** — OHLCV plus quote volume and trade count where the venue
@@ -21,9 +23,15 @@ convenience feed), pluggable keyed exchange feeds tomorrow. Built for
 - **Tickers** — last, bid/ask, 24h high/low/volume, spread in bps.
 - **Funding rates** — model + APR annualization for perpetual carry
   accounting.
-- **Two free providers** — `CoinbasePublicProvider` (keyless public REST:
-  full market listings, auto-paginated candles, tickers; stdlib `urllib`
-  only) and `YFinanceCryptoProvider` (15 liquid majors, optional extra).
+- **Three free providers** — `CoinbasePublicProvider` (keyless public
+  REST: full market listings, auto-paginated candles, tickers; stdlib
+  `urllib` only), `KrakenPublicProvider` (keyless public REST: AssetPairs
+  listings, 720-candle auto-paginated OHLC, tickers; cheapest data,
+  priciest taker fees — see `docs/KRAKEN.md`), `BinanceUSPublicProvider`
+  (keyless public REST: exchangeInfo listings, 1000-kline auto-paginated
+  bars, 24h tickers; 0% maker / 0.02% taker spot fees — see
+  `docs/BINANCE_US.md`), and `YFinanceCryptoProvider` (15 liquid majors,
+  optional extra).
 - **Disk cache** — bars (60 min TTL) and market listings (24 h TTL);
   tickers are real-time and never cached.
 - **Bounded-memory streaming** — `stream_bars` walks long histories in
@@ -38,7 +46,7 @@ pip install trade-data-crypto              # core + Coinbase provider, stdlib on
 pip install "trade-data-crypto[yfinance]"  # + yfinance convenience feed
 ```
 
-Requires Python 3.10+. No API keys needed for either bundled provider.
+Requires Python 3.10+. No API keys needed for any bundled provider.
 
 ## Quickstart
 
@@ -73,15 +81,16 @@ print(f"spread {ticker.spread_bps:.1f} bps")
    │CryptoDataProvi-  │  │    DiskCache    │  │ stats (vwap,       │
    │der (ABC)         │  │  JSON on disk   │  │ funding_apr)       │
    └────────┬─────────┘  └─────────────────┘  │ symbols            │
-            ├─────────────────┐               └────────────────────┘
-            ▼                 ▼
+            ├──────────┬──────────┐
+            ▼          ▼          ▼
+   ┌────────────────┐ ┌───────────────────┐ ┌────────────────────┐
+   │CoinbasePublic- │ │KrakenPublic-      │ │BinanceUSPublic-    │
+   │Provider        │ │Provider           │ │Provider            │
+   └────────────────┘ └───────────────────┘ └────────────────────┘
    ┌────────────────┐ ┌───────────────────┐
-   │CoinbasePublic- │ │YFinanceCrypto-    │  ← keyless
-   │Provider        │ │Provider           │
+   │YFinanceCrypto- │ │ YourExchange      │  ← implement 4 methods
+   │Provider        │ │                   │     for a keyed feed
    └────────────────┘ └───────────────────┘
-   ┌────────────────┐
-   │ YourExchange   │  ← implement 4 methods for a keyed feed
-   └────────────────┘
 
 models: CryptoMarket · CryptoBar · CryptoTicker · FundingRate · Timeframe · MarketType
 ```
@@ -91,6 +100,14 @@ candles per request; the provider pages `[start, end)` automatically in
 `300 × granularity` windows and merges/sorts/dedupes. Public rate limit
 is ~10 req/s; the provider throttles (default 0.15 s) and retries with
 backoff.
+
+**Kraken pagination.** OHLC returns max 720 candles per request; the
+provider pages with `since=<last>` (inclusive — the boundary candle
+repeats and is deduped) and merges/sorts. Default throttle 0.6 s.
+
+**Binance.US pagination.** Klines return max 1000 rows per request; the
+provider pages with `startTime = lastCloseTime + 1` and merges/sorts.
+Default throttle 0.35 s (kline weight scales with `limit`).
 
 **yfinance scope.** 15 liquid majors vs USD, daily + intraday; `H4` is
 resampled from 1h bars. It's a convenience feed — Coinbase is the
@@ -161,6 +178,7 @@ closes = [b.close for b in bars]
 | `client.stream_bars(...)` | method | Chunked iteration |
 | `canonical` / `parse_pair` | functions | `BASE/QUOTE` symbology |
 | `to_coinbase_id` / `to_binance_symbol` | functions | Exchange symbol forms |
+| `to_binanceus_symbol` / `to_kraken_pair` | functions | Binance.US / Kraken symbol forms |
 | `vwap` / `funding_apr` | functions | Pure analytics |
 
 ## Testing
@@ -192,11 +210,11 @@ Sibling repositories:
 
 ## The maths
 
-**What you learn.** This is a data engine, so its "maths" is the measurement layer everything downstream trusts: volume-weighted average price, bid/ask spread in basis points, perpetual funding-rate annualization, canonical symbology mapping, and exchange-native bar pagination (300 candles per Coinbase page, merged/sorted/deduped).
+**What you learn.** This is a data engine, so its "maths" is the measurement layer everything downstream trusts: volume-weighted average price, bid/ask spread in basis points, perpetual funding-rate annualization, canonical symbology mapping, and exchange-native bar pagination (Coinbase 300, Kraken 720, Binance.US 1000 candles per page, merged/sorted/deduped).
 
 **Why it matters.** Every backtest P&L, Sharpe ratio, and VaR number in the suite is computed from bars this engine delivers. Getting VWAP, spread, and funding right at the source means the research built on top inherits honest execution-cost and carry assumptions instead of silently optimistic ones.
 
-**The maths.** `vwap(bars) = Σ(close·volume) / Σ(volume)` over the bar set (None when total volume is zero). `spread_bps = (ask − bid) / last × 10,000`, None when bid/ask is missing. `funding_apr(rate, interval_hours) = (1 + rate)^(8760/interval_hours) − 1` — compounding the per-interval funding rate over a year; positive means longs pay shorts, and `trade-risk` uses it as `daily_cost = funding_apr / 365 × notional` for perp carry accounting. Symbology is a pure string bijection: canonical `BASE/QUOTE` ↔ `BTC-USD` (Coinbase/Yahoo) ↔ `BTCUSDT` (Binance), so one symbol addresses every venue. Coinbase pagination walks `[start, end)` in `300 × granularity` windows (O(windows) HTTP calls) with merge/sort/dedupe so page boundaries never double-count a candle. Crypto trades 24/7, so unlike equities there is no session-gap or weekend handling in bar construction.
+**The maths.** `vwap(bars) = Σ(close·volume) / Σ(volume)` over the bar set (None when total volume is zero). `spread_bps = (ask − bid) / last × 10,000`, None when bid/ask is missing. `funding_apr(rate, interval_hours) = (1 + rate)^(8760/interval_hours) − 1` — compounding the per-interval funding rate over a year; positive means longs pay shorts, and `trade-risk` uses it as `daily_cost = funding_apr / 365 × notional` for perp carry accounting. Symbology is a pure string bijection: canonical `BASE/QUOTE` ↔ `BTC-USD` (Coinbase/Yahoo) ↔ `BTCUSDT` (Binance) ↔ `BTCUSD` (Binance.US) ↔ `XXBTZUSD` (Kraken), so one symbol addresses every venue. Pagination walks `[start, end)` per venue — Coinbase in `300 × granularity` windows, Kraken with `since=<last>` over 720-candle pages (inclusive boundary, deduped), Binance.US with `startTime = lastCloseTime + 1` over 1000-kline pages (O(pages) HTTP calls) — with merge/sort/dedupe so page boundaries never double-count a candle. Crypto trades 24/7, so unlike equities there is no session-gap or weekend handling in bar construction.
 
 **Honest limitations.** VWAP uses bar *close* × volume, not intrabar trade prints — it's an approximation, not exchange VWAP. Funding annualization compounds a single observed rate; real funding drifts every interval. Spread in bps is a point-in-time quote, not an executable cost. yfinance `H4` bars are resampled from 1h, introducing resampling artifacts. Tickers are never cached (real-time), but bars carry a 60-minute TTL — backtests on "today's" bars can lag the market.
 

@@ -17,7 +17,9 @@ from trade_data_crypto.symbols import (
     canonical,
     parse_pair,
     to_binance_symbol,
+    to_binanceus_symbol,
     to_coinbase_id,
+    to_kraken_pair,
     to_yahoo_symbol,
 )
 
@@ -39,6 +41,9 @@ def test_exchange_symbol_forms():
     assert to_coinbase_id("BTC/USD") == "BTC-USD"
     assert to_yahoo_symbol("BTC/USD") == "BTC-USD"
     assert to_binance_symbol("BTC/USDT") == "BTCUSDT"
+    assert to_binanceus_symbol("BTC/USD") == "BTCUSD"
+    assert to_kraken_pair("BTC/USD") == "XXBTZUSD"
+    assert to_kraken_pair("ETH/USD") == "XETHZUSD"
 
 
 def _bar(close, volume, day=1, symbol="BTC/USD"):
